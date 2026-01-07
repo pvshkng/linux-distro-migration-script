@@ -153,27 +153,6 @@ if ! command -v flatpak &> /dev/null; then
     fi
 fi
 
-echo "Installing Zen Browser..."
-if flatpak install -y flathub io.github.zen_browser.zen &> /dev/null; then
-    log_success "Zen Browser installation"
-else
-    log_error "Zen Browser installation"
-fi
-
-echo "Installing Obsidian..."
-if flatpak install -y flathub md.obsidian.Obsidian &> /dev/null; then
-    log_success "Obsidian installation"
-else
-    log_error "Obsidian installation"
-fi
-
-echo "Installing Heroic Launcher..."
-if flatpak install -y flathub com.heroicgameslauncher.hgl &> /dev/null; then
-    log_success "Heroic Launcher installation"
-else
-    log_error "Heroic Launcher installation"
-fi
-
 echo "Installing qBittorrent..."
 if flatpak install -y flathub org.qbittorrent.qBittorrent &> /dev/null; then
     log_success "qBittorrent installation"
