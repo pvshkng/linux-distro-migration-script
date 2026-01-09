@@ -116,6 +116,25 @@ else
     fi
 fi
 
+echo "Installing uv..."
+if curl -LsSf https://astral.sh/uv/install.sh | sh; then
+    export PATH="$HOME/.local/bin:$PATH"
+    log_success "uv installation"
+else
+    log_error "uv installation"
+fi
+
+echo "Installing posting via uv..."
+if command -v uv &> /dev/null; then
+    if uv tool install --python 3.14 posting; then
+        log_success "posting installation"
+    else
+        log_error "posting installation"
+    fi
+else
+    log_error "posting installation (uv not available)"
+fi
+
 echo "Installing Bun..."
 if curl -fsSL https://bun.com/install | bash; then
     export BUN_INSTALL="$HOME/.bun"
