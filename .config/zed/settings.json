@@ -1,0 +1,51 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run `zed: open default settings` from the
+// command palette (cmd-shift-p / ctrl-shift-p)
+{
+  "features": {
+    "edit_prediction_provider": "copilot",
+  },
+  "autosave": {
+    "after_delay": {
+      "milliseconds": 1000,
+    },
+  },
+  "ui_font_size": 16,
+  "buffer_font_size": 15,
+  "theme": {
+    "mode": "light",
+    "light": "Fleet Light",
+    "dark": "Fleet Dark",
+  },
+  "inlay_hints": {
+    "enabled": true,
+    "show_value_hints": true,
+    "show_type_hints": true,
+    "show_other_hints": true,
+  },
+  "show_completions_on_input": true,
+  "show_completion_documentation": true,
+  "languages": {
+    "TypeScript": {
+      "language_servers": [
+        "!typescript-language-server",
+        "vtsls",
+        "!tailwindcss-language-server",
+        "!eslint",
+        "!emmet-language-server",
+      ],
+      "prettier": {
+        "allowed": true,
+      },
+    },
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false,
+  },
+}
