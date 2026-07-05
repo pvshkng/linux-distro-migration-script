@@ -4,6 +4,8 @@
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.mouse = "a"
+vim.opt.mousemodel = "popup_setpos" -- right-click opens context menu at click position
+vim.opt.mousemoveevent = true
 vim.opt.termguicolors = true
 vim.opt.clipboard = "unnamedplus"
 vim.opt.signcolumn = "yes"
@@ -23,6 +25,20 @@ vim.opt.undodir = vim.fn.stdpath("data") .. "/undo"
 
 -- Leader key
 vim.g.mapleader = " "
+
+-- ======================
+-- MULTI-CURSOR (vim-visual-multi)
+-- Must be set BEFORE the plugin loads
+-- ======================
+vim.g.VM_mouse_mappings = 1 -- also enables Ctrl+LeftClick to add cursor
+vim.g.VM_maps = {
+  ["Find Under"] = "<C-d>",          -- Ctrl+D: select next occurrence (VSCode)
+  ["Find Subword Under"] = "<C-d>",
+  ["Select All"] = "<C-S-l>",        -- Ctrl+Shift+L: select all occurrences
+  ["Add Cursor Down"] = "<S-A-Down>", -- Shift+Alt+Down: add cursor below
+  ["Add Cursor Up"] = "<S-A-Up>",     -- Shift+Alt+Up: add cursor above
+  ["Skip Region"] = "<C-S-d>",
+}
 
 -- ======================
 -- VSCODE-LIKE KEYMAPS
@@ -59,11 +75,19 @@ vim.keymap.set("n", "<F2>", vim.lsp.buf.rename, { desc = "Rename symbol" })
 -- Find (handled by Telescope below)
 -- Replace will use spectre plugin
 
--- Move lines up/down (Alt+j/k like VSCode Alt+Up/Down)
+-- Multi-cursor with mouse (Alt+Click like VSCode; Ctrl+Click also works)
+vim.keymap.set("n", "<M-LeftMouse>", "<Plug>(VM-Mouse-Cursor)", { desc = "Add cursor (Alt+Click)" })
+vim.keymap.set("n", "<M-RightMouse>", "<Plug>(VM-Mouse-Word)", { desc = "Select word (Alt+RightClick)" })
+
+-- Move lines up/down (Alt+Up/Down like VSCode, plus Alt+j/k)
 vim.keymap.set("n", "<A-j>", ":m .+1<CR>==", { desc = "Move line down" })
 vim.keymap.set("n", "<A-k>", ":m .-2<CR>==", { desc = "Move line up" })
 vim.keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
 vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
+vim.keymap.set("n", "<A-Down>", ":m .+1<CR>==", { desc = "Move line down" })
+vim.keymap.set("n", "<A-Up>", ":m .-2<CR>==", { desc = "Move line up" })
+vim.keymap.set("v", "<A-Down>", ":m '>+1<CR>gv=gv", { desc = "Move selection down" })
+vim.keymap.set("v", "<A-Up>", ":m '<-2<CR>gv=gv", { desc = "Move selection up" })
 
 -- Duplicate line (Shift+Alt+Down/Up)
 vim.keymap.set("n", "<S-A-j>", "yyp", { desc = "Duplicate line down" })
@@ -87,6 +111,68 @@ require("conform").format({
   lsp_fallback = true,
 })
 end, { desc = "Format with Conform" })
+
+-- Indent with Tab / Shift+Tab in visual mode (VSCode style)
+vim.keymap.set("v", "<Tab>", ">gv", { desc = "Indent selection" })
+vim.keymap.set("v", "<S-Tab>", "<gv", { desc = "Outdent selection" })
+
+-- Toggle comment (Ctrl+/ — terminals send it as <C-/> or <C-_>)
+for _, key in ipairs({ "<C-/>", "<C-_>" }) do
+  vim.keymap.set("n", key, "<Plug>(comment_toggle_linewise_current)", { desc = "Toggle comment" })
+  vim.keymap.set("v", key, "<Plug>(comment_toggle_linewise_visual)", { desc = "Toggle comment" })
+  vim.keymap.set("i", key, "<Esc><Plug>(comment_toggle_linewise_current)", { desc = "Toggle comment" })
+end
+
+-- New empty file (Ctrl+N)
+vim.keymap.set("n", "<C-n>", ":enew<CR>", { desc = "New file" })
+
+-- Go to line (Ctrl+G)
+vim.keymap.set("n", "<C-g>", function()
+  vim.ui.input({ prompt = "Go to Line: " }, function(input)
+    local n = tonumber(input)
+    if n then
+      vim.api.nvim_win_set_cursor(0, { math.max(1, math.min(n, vim.api.nvim_buf_line_count(0))), 0 })
+    end
+  end)
+end, { desc = "Go to line" })
+
+-- ======================
+-- CTRL+K CHORDS (VSCode style)
+-- ======================
+-- Ctrl+K M — change language mode (filetype) of current buffer
+vim.keymap.set("n", "<C-k>m", function()
+  vim.ui.select(vim.fn.getcompletion("", "filetype"), {
+    prompt = "Select Language Mode",
+  }, function(ft)
+    if ft then vim.bo.filetype = ft end
+  end)
+end, { desc = "Change language mode" })
+
+-- Ctrl+K S — save all
+vim.keymap.set("n", "<C-k>s", ":wa<CR>", { desc = "Save all" })
+
+-- Ctrl+K W — close all buffers
+vim.keymap.set("n", "<C-k>w", ":%bd<CR>", { desc = "Close all buffers" })
+
+-- ======================
+-- RIGHT-CLICK CONTEXT MENU (editor)
+-- ======================
+vim.cmd([[
+  silent! aunmenu PopUp
+  anoremenu PopUp.Go\ to\ Definition <cmd>lua vim.lsp.buf.definition()<CR>
+  anoremenu PopUp.Find\ References <cmd>lua vim.lsp.buf.references()<CR>
+  anoremenu PopUp.Rename\ Symbol <cmd>lua vim.lsp.buf.rename()<CR>
+  anoremenu PopUp.Code\ Action <cmd>lua vim.lsp.buf.code_action()<CR>
+  anoremenu PopUp.Hover\ Info <cmd>lua vim.lsp.buf.hover()<CR>
+  anoremenu PopUp.-1- <Nop>
+  vnoremenu PopUp.Cut "+x
+  vnoremenu PopUp.Copy "+y
+  anoremenu PopUp.Paste "+gP
+  vnoremenu PopUp.Paste "+P
+  anoremenu PopUp.Select\ All ggVG
+  anoremenu PopUp.-2- <Nop>
+  anoremenu PopUp.Format\ Document <cmd>lua require("conform").format({ async = true, lsp_fallback = true })<CR>
+]])
 
 -- ======================
 -- LAZY.NVIM SETUP
@@ -141,11 +227,62 @@ if not vim.loop.fs_stat(lazypath) then
     -- Enable mouse support
     vim.o.mouse = "a"
 
+    -- Right-click context menu for the file tree (VSCode explorer style)
+    local function tree_context_menu(state)
+      -- Move cursor to the row that was right-clicked
+      local mp = vim.fn.getmousepos()
+      if mp.line > 0 then
+        pcall(vim.api.nvim_win_set_cursor, state.winid or 0, { mp.line, 0 })
+      end
+
+      local fs = require("neo-tree.sources.filesystem.commands")
+      local actions = {
+        { "Open",           function() fs.open(state) end },
+        { "New File...",    function() fs.add(state) end },
+        { "New Folder...",  function() fs.add_directory(state) end },
+        { "Rename...",      function() fs.rename(state) end },
+        { "Copy",           function() fs.copy_to_clipboard(state) end },
+        { "Cut",            function() fs.cut_to_clipboard(state) end },
+        { "Paste",          function() fs.paste_from_clipboard(state) end },
+        { "Delete",         function() fs.delete(state) end },
+        { "Copy Path", function()
+            local node = state.tree:get_node()
+            if node then
+              vim.fn.setreg("+", node.path)
+              vim.notify("Copied path: " .. node.path)
+            end
+          end },
+        { "Reveal in File Manager", function()
+            local node = state.tree:get_node()
+            if node then
+              vim.fn.jobstart({ "xdg-open", vim.fn.fnamemodify(node.path, ":h") }, { detach = true })
+            end
+          end },
+      }
+
+      vim.ui.select(actions, {
+        prompt = "Explorer",
+        format_item = function(item) return item[1] end,
+      }, function(choice)
+        if choice then choice[2]() end
+      end)
+    end
+
     require("neo-tree").setup({
       close_if_last_window = false,
       popup_border_style = "rounded",
       enable_git_status = true,
       enable_diagnostics = false,
+
+      -- VSCode-like clickable tabs at the top of the sidebar
+      source_selector = {
+        winbar = true,
+        sources = {
+          { source = "filesystem", display_name = " Files " },
+          { source = "git_status", display_name = " Git " },
+          { source = "buffers", display_name = " Bufs " },
+        },
+      },
 
       filesystem = {
         filtered_items = {
@@ -165,14 +302,16 @@ if not vim.loop.fs_stat(lazypath) then
             -- Explorer-like shortcuts
             ["<F2>"]  = "rename",
             ["<Del>"] = "delete",
-            ["<F12>"] = "add",
+            ["a"]     = "add",
+            ["A"]     = "add_directory",
 
-            ["<C-c>"] = "copy",
-            ["<C-x>"] = "cut",
-            ["<C-v>"] = "paste",
+            -- Clipboard-style file operations (copy/cut/paste files)
+            ["<C-c>"] = "copy_to_clipboard",
+            ["<C-x>"] = "cut_to_clipboard",
+            ["<C-v>"] = "paste_from_clipboard",
 
-            -- Mouse
-            ["<RightMouse>"] = "show_help",
+            -- Right-click context menu (copy, cut, paste, rename, delete, ...)
+            ["<RightMouse>"] = tree_context_menu,
 
             -- Navigation
             ["<CR>"] = "open",
@@ -196,6 +335,20 @@ if not vim.loop.fs_stat(lazypath) then
       "<C-b>",
       "<cmd>Neotree filesystem toggle left<CR>",
       { desc = "Toggle file explorer" }
+    )
+    -- Ctrl+Shift+E — reveal current file in explorer (VSCode)
+    vim.keymap.set(
+      "n",
+      "<C-S-e>",
+      "<cmd>Neotree filesystem reveal left<CR>",
+      { desc = "Reveal file in explorer" }
+    )
+    -- Ctrl+Shift+G — git status sidebar (VSCode source control)
+    vim.keymap.set(
+      "n",
+      "<C-S-g>",
+      "<cmd>Neotree git_status toggle left<CR>",
+      { desc = "Toggle git status sidebar" }
     )
     end,
   },
@@ -241,11 +394,17 @@ if not vim.loop.fs_stat(lazypath) then
         show_close_icon = false,
         offsets = {
           {
-            filetype = "NvimTree",
+            filetype = "neo-tree",
             text = "File Explorer",
             highlight = "Directory",
             text_align = "left"
           }
+        },
+        -- Show close button on hover (needs mousemoveevent)
+        hover = {
+          enabled = true,
+          delay = 150,
+          reveal = { "close" },
         },
       }
     })
@@ -277,6 +436,9 @@ if not vim.loop.fs_stat(lazypath) then
     vim.keymap.set("t", "<C-h>", [[<C-\><C-n><C-w>h]], { desc = "Navigate left" })
     vim.keymap.set("t", "<C-j>", [[<C-j>]], { desc = "Toggle terminal" })
     vim.keymap.set("t", "<C-l>", [[<C-\><C-n><C-w>l]], { desc = "Navigate right" })
+
+    -- Ctrl+` also toggles the terminal (VSCode), if your terminal sends it
+    vim.keymap.set({ "n", "t" }, "<C-`>", "<cmd>ToggleTerm<CR>", { desc = "Toggle terminal" })
     end,
   },
 
@@ -310,8 +472,12 @@ if not vim.loop.fs_stat(lazypath) then
     })
 
     local builtin = require("telescope.builtin")
-    vim.keymap.set("n", "<C-p>", builtin.find_files, { desc = "Find files" })
-    vim.keymap.set("n", "<C-f>", builtin.live_grep, { desc = "Live grep" })
+    vim.keymap.set("n", "<C-p>", builtin.find_files, { desc = "Find files (Ctrl+P)" })
+    vim.keymap.set("n", "<C-f>", builtin.current_buffer_fuzzy_find, { desc = "Find in current file" })
+    vim.keymap.set("n", "<C-S-f>", builtin.live_grep, { desc = "Search across files" })
+    vim.keymap.set("n", "<C-S-p>", builtin.commands, { desc = "Command palette" })
+    vim.keymap.set("n", "<C-t>", builtin.lsp_dynamic_workspace_symbols, { desc = "Workspace symbols" })
+    vim.keymap.set("n", "<C-S-o>", builtin.lsp_document_symbols, { desc = "Document symbols" })
     vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Find buffers" })
     vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Help tags" })
     vim.keymap.set("n", "<leader>fr", builtin.oldfiles, { desc = "Recent files" })
@@ -325,7 +491,8 @@ if not vim.loop.fs_stat(lazypath) then
     dependencies = { "nvim-lua/plenary.nvim" },
     config = function()
     require("spectre").setup()
-    vim.keymap.set("n", "<C-S-f>", '<cmd>lua require("spectre").toggle()<CR>', { desc = "Toggle Spectre" })
+    -- Ctrl+Shift+H — search & replace across files (VSCode)
+    vim.keymap.set("n", "<C-S-h>", '<cmd>lua require("spectre").toggle()<CR>', { desc = "Search & replace in files" })
     vim.keymap.set("n", "<leader>sw", '<cmd>lua require("spectre").open_visual({select_word=true})<CR>', { desc = "Search current word" })
     end,
   },
@@ -420,10 +587,17 @@ if not vim.loop.fs_stat(lazypath) then
                               vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
                               vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
                               vim.keymap.set("n", "gi", vim.lsp.buf.implementation, opts)
-                              vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, opts)
+                              -- NOTE: <C-k> is intentionally free — it's the VSCode chord prefix (Ctrl+K M, etc.)
+                              vim.keymap.set("i", "<C-S-Space>", vim.lsp.buf.signature_help, opts)
                               vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
                               vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, opts)
                               vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)
+                              -- VSCode-style F-keys
+                              vim.keymap.set("n", "<F12>", vim.lsp.buf.definition, opts)
+                              vim.keymap.set("n", "<S-F12>", vim.lsp.buf.references, opts)
+                              vim.keymap.set("n", "<F8>", vim.diagnostic.goto_next, opts)
+                              vim.keymap.set("n", "<S-F8>", vim.diagnostic.goto_prev, opts)
+                              vim.keymap.set({ "n", "v" }, "<C-.>", vim.lsp.buf.code_action, opts)
                               end,
   })
 
@@ -671,17 +845,4 @@ if not vim.loop.fs_stat(lazypath) then
     "echasnovski/mini.indentscope",
     version = false,
   },
-  })
-
-  -- Mason
-  require("mason").setup()
-
-  require("mason-lspconfig").setup({
-    ensure_installed = {
-      -- Python
-      "pyright",
-
-      -- TypeScript / React
-      "ts_ls", -- modern replacement for tsserver
-    },
   })
